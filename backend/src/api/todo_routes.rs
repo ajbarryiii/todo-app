@@ -1,7 +1,7 @@
 use actix_web::{web, HttpResponse, Responder};
 use serde::Deserialize;
 use crate::db::todo_db::{add_todo_item, get_all_items};
-use crate::handlers::todo::{get_todos,create_todo ,delete_todo};
+use crate::handlers::todo::{get_todos,create_todo ,delete_todo, update_todo};
 use crate::models::todo_item::{ToDoItem, RecurringType};
 use sqlx::PgPool;
 
@@ -52,5 +52,6 @@ pub fn todo_routes(cfg: &mut web::ServiceConfig) {
     );
     cfg.service(get_todos)
         .service(create_todo)
-        .service(delete_todo);
+        .service(delete_todo)
+        .service(update_todo);
 }

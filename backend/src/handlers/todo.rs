@@ -90,3 +90,52 @@ async fn delete_todo(
         }
     }
 }
+
+#[put("/todos/{id}")]
+async fn update_todo(
+    pool: web::Data<sqlx::PgPool>,
+    id: web::Path<i32>,
+    item: web::Json<ToDoItem>
+) -> Result<HttpResponse> {
+    debug!("Attempting to update todo with id: {}", id);
+    
+    // First, verify the item exists
+    let id_value = id.into_inner();
+    match todo_db::get_item_by_id(&pool, id_value).await {
+        Ok(Some(_)) => {
+            // Item exists, try to update it
+            let mut update_item = item.into_inner();
+            update_item.id = id_value; // Ensure the ID matches the path parameter
+            
+            match todo_db::update_todo_item(&pool, &update_item).await {
+                Ok(updated_item) => {
+                    debug!("Successfully updated todo with id: {}", updated_item.id);
+                    Ok(HttpResponse::Ok().json(updated_item))
+                },
+                Err(e) => {
+                    error!("Failed to update todo: {}", e);
+                    Ok(HttpResponse::InternalServerError()
+                        .json(json!({
+                            "error": "Failed to update todo",
+                            "details": e.to_string()
+                        })))
+                }
+            }
+        },
+        Ok(None) => {
+            error!("Todo with id {} not found", id_value);
+            Ok(HttpResponse::NotFound()
+                .json(json!({
+                    "error": "Todo not found"
+                })))
+        },
+        Err(e) => {
+            error!("Database error while looking up todo {}: {}", id_value, e);
+            Ok(HttpResponse::InternalServerError()
+                .json(json!({
+                    "error": "Failed to lookup todo",
+                    "details": e.to_string()
+                })))
+        }
+    }
+}

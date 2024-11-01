@@ -4,7 +4,7 @@ import { TodoItem } from '../types/todo';
 
 // Create an axios instance (similar to creating a client in Python requests)
 const api = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: 'http://localhost:8080',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -41,3 +41,32 @@ export const todoApi = {
         }
     }
 };
+
+// Test function to check API configuration
+export const testApiConfig = async () => {
+  try {
+    console.log('Testing API endpoints...');
+    console.log('Base URL:', api.defaults.baseURL);
+    
+    // Test GET
+    await api.get('/todos');
+    console.log('GET /todos - OK');
+    
+    // Test OPTIONS (CORS)
+    await api.options('/todos');
+    console.log('OPTIONS /todos - OK');
+    
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('API Configuration Test Failed:', {
+        url: error.config?.url,
+        method: error.config?.method,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+    }
+  }
+};
+
+// Call this in your app's initialization
+testApiConfig();
