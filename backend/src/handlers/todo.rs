@@ -46,39 +46,46 @@ async fn create_todo(
     }
 }
 
-#[delete("/todos/{id}")]  // Note the route pattern
+#[delete("/todos/{id}")]
 async fn delete_todo(
     pool: web::Data<sqlx::PgPool>,
     id: web::Path<i32>
 ) -> Result<HttpResponse> {
     debug!("Attempting to delete todo with id: {}", id);
     
-    match sqlx::query!(
-        r#"
-        DELETE FROM todo_items
-        WHERE id = $1
-        RETURNING id
-        "#,
-        id.into_inner()
-    )
-    .fetch_optional(pool.get_ref())
-    .await {
-        Ok(Some(_)) => {
-            debug!("Successfully deleted todo with id: {}", id);
-            Ok(HttpResponse::NoContent().finish())
+    // First, try to find the item
+    match todo_db::get_item_by_id(&pool, id.into_inner()).await {
+        Ok(Some(item)) => {
+            // Item found, try to delete it
+            match todo_db::delete_todo_item(&pool, &item).await {
+                Ok(deleted_item) => {
+                    debug!("Successfully deleted todo with id: {}", deleted_item.id);
+                    Ok(HttpResponse::Ok().json(deleted_item))
+                },
+                Err(e) => {
+                    error!("Failed to delete todo: {}", e);
+                    Ok(HttpResponse::InternalServerError()
+                        .json(json!({
+                            "error": "Failed to delete todo",
+                            "details": e.to_string()
+                        })))
+                }
+            }
         },
         Ok(None) => {
             error!("Todo with id {} not found", id);
-            Ok(HttpResponse::NotFound().json(serde_json::json!({
-                "error": "Todo not found"
-            })))
+            Ok(HttpResponse::NotFound()
+                .json(json!({
+                    "error": "Todo not found"
+                })))
         },
         Err(e) => {
-            error!("Database error while deleting todo {}: {}", id, e);
-            Ok(HttpResponse::InternalServerError().json(serde_json::json!({
-                "error": "Failed to delete todo",
-                "details": e.to_string()
-            })))
+            error!("Database error while looking up todo {}: {}", id, e);
+            Ok(HttpResponse::InternalServerError()
+                .json(json!({
+                    "error": "Failed to lookup todo",
+                    "details": e.to_string()
+                })))
         }
     }
 }

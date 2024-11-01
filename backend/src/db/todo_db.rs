@@ -8,7 +8,7 @@ struct TodoItemRow {
     id: i32,
     item_name: String,
     due_date: Option<NaiveDateTime>,
-    task_category: String,  // Changed to non-optional to match ToDoItem
+    task_category: String,  
     recurring_type: Option<JsonValue>,
     done: bool,
 }
@@ -119,4 +119,20 @@ pub async fn get_items_by_category(pool: &PgPool, category: &str) -> Result<Vec<
     .await?;
 
     Ok(rows.into_iter().map(Into::into).collect())
+}
+
+
+pub async fn delete_todo_item(pool: &PgPool, item: &ToDoItem) -> Result<ToDoItem, sqlx::Error> {
+    let row = sqlx::query_as::<_, TodoItemRow>(
+        r#"
+        DELETE FROM todo_items
+        WHERE id = $1
+        RETURNING id, item_name, due_date::timestamp, task_category, recurring_type, done
+        "#,
+    )
+    .bind(item.id)
+    .fetch_one(pool)
+    .await?;
+
+    Ok(row.into()) // Use the From implementation instead of manual conversion
 }
