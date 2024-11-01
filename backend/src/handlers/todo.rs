@@ -54,7 +54,8 @@ async fn delete_todo(
     debug!("Attempting to delete todo with id: {}", id);
     
     // First, try to find the item
-    match todo_db::get_item_by_id(&pool, id.into_inner()).await {
+    let id_value = id.into_inner();
+    match todo_db::get_item_by_id(&pool, id_value).await {
         Ok(Some(item)) => {
             // Item found, try to delete it
             match todo_db::delete_todo_item(&pool, &item).await {
@@ -73,14 +74,14 @@ async fn delete_todo(
             }
         },
         Ok(None) => {
-            error!("Todo with id {} not found", id);
+            error!("Todo with id {} not found", id_value);
             Ok(HttpResponse::NotFound()
                 .json(json!({
                     "error": "Todo not found"
                 })))
         },
         Err(e) => {
-            error!("Database error while looking up todo {}: {}", id, e);
+            error!("Database error while looking up todo {}: {}", id_value, e);
             Ok(HttpResponse::InternalServerError()
                 .json(json!({
                     "error": "Failed to lookup todo",

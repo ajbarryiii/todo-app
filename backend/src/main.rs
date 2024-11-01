@@ -7,6 +7,7 @@ use std::env;
 mod api;
 mod db;
 mod models;
+mod handlers;
 
 // Function to configure the database
 async fn configure_database() -> Result<PgPool, sqlx::Error> {
